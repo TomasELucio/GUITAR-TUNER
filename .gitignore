@@ -1,0 +1,18 @@
+# Archivos de compilación y binarios
+Debug/
+Release/
+*.o
+*.d
+*.su
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+
+# Configuraciones locales de Eclipse y STM32CubeIDE
+.metadata/
+.settings/
+.launches/
+*.launch
+*.user
