@@ -21,50 +21,25 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "freq_calc.h"
+#include "string_select.h"
+#include "lcd_display.h"
+#include "tuner_ctrl.h"
 /* USER CODE END Includes */
 
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
-
 /* Private variables ---------------------------------------------------------*/
+I2C_HandleTypeDef hi2c1;
 TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
-#define TIMER_FREQ   1000000UL   // Hz — TIM2 a 1 MHz
-#define SILENCE_MS   100U        // ms sin flancos = silencio
-
-volatile uint32_t t1 = 0;
-volatile float    f_medida = 0.0f;
-volatile uint32_t last_capture = 0;
-volatile uint8_t  nueva_medicion = 0;
-volatile uint8_t  frecuencia_detectada = 0;
+/* Todas las variables de estado ahora están encapsuladas en los módulos */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
-/* USER CODE BEGIN PFP */
-
-/* USER CODE END PFP */
-
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
+static void MX_I2C1_Init(void);
 
 /**
   * @brief  The application entry point.
@@ -72,66 +47,79 @@ static void MX_TIM2_Init(void);
   */
 int main(void)
 {
-
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
   /* MCU Configuration--------------------------------------------------------*/
-
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
-
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM2_Init();
+  MX_I2C1_Init();
+
   /* USER CODE BEGIN 2 */
-  HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
+  // 1. Inicializar la librería de cálculo de frecuencia (TIM2, Channel 1)
+  freq_calc_init(&htim2, TIM_CHANNEL_1);
+
+  // 2. Inicializar el selector de cuerdas (S2 = Cuerda+, S1 = Cuerda-)
+  string_select_init(S2_Pin, S1_Pin);
+
+  // 3. Inicializar el control principal del afinador
+  tuner_init();
+
+  // 4. Inicializar el display LCD y asignarle el botón de modo (S3)
+  lcd_display_init(&hi2c1, S3_Pin);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    // Si pasa el tiempo de silencio, borramos la medida y apagamos la detección
-    if ((HAL_GetTick() - last_capture) > SILENCE_MS) {
-        f_medida = 0.0f;
-        frecuencia_detectada = 0;
-    }
-    else if (nueva_medicion) {
-        nueva_medicion = 0;
+    // Actualizar los cálculos del lazo de control del afinador
+    tuner_update();
 
-        // Rango estricto: 110 Hz +- 10 Hz (100 Hz a 120 Hz)
-        if (f_medida >= 100.0f && f_medida <= 120.0f) {
-            frecuencia_detectada = 1;
+    // Actualizar la interfaz gráfica (la función ya maneja su propio timing)
+    lcd_display_update();
+
+    // Lógica de actuación física básica para test visual en placa
+    if (tuner_is_active()) {
+        if (tuner_is_tuned()) {
+            HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET); // Afinada -> LED prendido
         } else {
-            frecuencia_detectada = 0;
+            HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET); // Desafinada -> LED apagado
         }
-    }
-
-    // Actualización física del LED integrado (LD2) según la bandera
-    if (frecuencia_detectada) {
-        HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
     } else {
+        // Silencio
         HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
     }
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
+
+// ... [Omito las funciones de inicialización generadas por CubeMX (SystemClock_Config, MX_GPIO_Init, etc.) para mantener la limpieza, permanecen exactamente iguales a tu original] ...
+
+/* USER CODE BEGIN 4 */
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
+    // Delegar interrupción del timer a la librería freq_calc
+    freq_calc_ISR(htim);
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	if (GPIO_Pin == S1_Pin || GPIO_Pin == S2_Pin) {
+	        string_select_isr(GPIO_Pin);
+	    }
+	    if (GPIO_Pin == S3_Pin) {
+	        lcd_display_isr(GPIO_Pin);
+	    }
+}
+
+
 
 /**
   * @brief System Clock Configuration
@@ -181,24 +169,38 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
   * @brief TIM2 Initialization Function
   * @param None
   * @retval None
   */
 static void MX_TIM2_Init(void)
 {
-
-  /* USER CODE BEGIN TIM2_Init 0 */
-
-  /* USER CODE END TIM2_Init 0 */
-
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_IC_InitTypeDef sConfigIC = {0};
 
-  /* USER CODE BEGIN TIM2_Init 1 */
-
-  /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 83;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -232,10 +234,6 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN TIM2_Init 2 */
-
-  /* USER CODE END TIM2_Init 2 */
-
 }
 
 /**
@@ -246,9 +244,6 @@ static void MX_TIM2_Init(void)
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-  /* USER CODE BEGIN MX_GPIO_Init_1 */
-
-  /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -292,36 +287,6 @@ static void MX_GPIO_Init(void)
 
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-
-  /* USER CODE BEGIN MX_GPIO_Init_2 */
-
-  /* USER CODE END MX_GPIO_Init_2 */
-}
-
-/* USER CODE BEGIN 4 */
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-    if (htim->Instance != TIM2) return;
-
-    uint32_t t2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-    uint32_t dt = (t2 >= t1) ? (t2 - t1)
-                              : (0xFFFFFFFFUL - t1 + t2 + 1);
-
-    if (dt > 500UL) {  // Filtrar pulsos menores a 500 us (> 2 kHz)
-        f_medida       = (float)TIMER_FREQ / (float)dt;
-        nueva_medicion = 1;
-        last_capture   = HAL_GetTick();
-    }
-    t1 = t2;
-}
-
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-    if (GPIO_Pin == B1_Pin) {
-        static uint32_t last_btn = 0;
-        if (HAL_GetTick() - last_btn < 200) return;  // Rebote
-        last_btn = HAL_GetTick();
-
-        frecuencia_detectada = 0; // Apaga el LED al presionar el botón de usuario
-    }
 }
 /* USER CODE END 4 */
 
@@ -331,27 +296,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   */
 void Error_Handler(void)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
   while (1)
   {
   }
-  /* USER CODE END Error_Handler_Debug */
 }
+
 #ifdef USE_FULL_ASSERT
-/**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
 void assert_failed(uint8_t *file, uint32_t line)
 {
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

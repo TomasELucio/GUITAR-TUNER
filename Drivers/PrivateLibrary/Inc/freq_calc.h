@@ -8,10 +8,8 @@
 #ifndef PRIVATELIBRARY_INC_FREQ_CALC_H_
 #define PRIVATELIBRARY_INC_FREQ_CALC_H_
 
- #include "stm32f4xx_hal_tim.h"
-
-#define TIMER_FREQ   1000000UL   // Hz — TIM2 a 1 MHz
-#define MIN_DT          500UL     // filtro: ignorar dt < 500 ticks (~2kHz máx)
+#include "stm32f4xx_hal.h"
+#include "tuner_config.h"
 
 typedef struct {
 	TIM_HandleTypeDef 	*timer;
@@ -22,9 +20,6 @@ typedef struct {
     uint8_t            	buf_idx;                // índice actual del buffer
     uint8_t            	buf_full;               // 1 cuando el buffer se llenó al menos una vez
 }FreqCalculator_t;
-
-static FreqCalculator_t FC;
-
 
 void freq_calc_init(TIM_HandleTypeDef *timer,uint32_t channel);
 void freq_calc_ISR(TIM_HandleTypeDef *timer);

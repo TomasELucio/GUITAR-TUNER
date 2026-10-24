@@ -22,10 +22,20 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ramfunc.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
- ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
+ /home/tomaslucio/Code/Tuner/Drivers/PrivateLibrary/Inc/freq_calc.h \
+ /home/tomaslucio/Code/Tuner/Drivers/PrivateLibrary/Inc/tuner_config.h \
+ /home/tomaslucio/Code/Tuner/Drivers/PrivateLibrary/Inc/string_select.h \
+ /home/tomaslucio/Code/Tuner/Drivers/PrivateLibrary/Inc/string_select.h \
+ /home/tomaslucio/Code/Tuner/Drivers/PrivateLibrary/Inc/lcd_display.h \
+ /home/tomaslucio/Code/Tuner/Drivers/I2C/inc/i2c_lcd.h \
+ /home/tomaslucio/Code/Tuner/Drivers/PrivateLibrary/Inc/tuner_ctrl.h \
+ /home/tomaslucio/Code/Tuner/Drivers/PrivateLibrary/Inc/freq_calc.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 ../Core/Inc/stm32f4xx_hal_conf.h:
@@ -50,7 +60,17 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ex.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ramfunc.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c_ex.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h:
+/home/tomaslucio/Code/Tuner/Drivers/PrivateLibrary/Inc/freq_calc.h:
+/home/tomaslucio/Code/Tuner/Drivers/PrivateLibrary/Inc/tuner_config.h:
+/home/tomaslucio/Code/Tuner/Drivers/PrivateLibrary/Inc/string_select.h:
+/home/tomaslucio/Code/Tuner/Drivers/PrivateLibrary/Inc/string_select.h:
+/home/tomaslucio/Code/Tuner/Drivers/PrivateLibrary/Inc/lcd_display.h:
+/home/tomaslucio/Code/Tuner/Drivers/I2C/inc/i2c_lcd.h:
+/home/tomaslucio/Code/Tuner/Drivers/PrivateLibrary/Inc/tuner_ctrl.h:
+/home/tomaslucio/Code/Tuner/Drivers/PrivateLibrary/Inc/freq_calc.h:
